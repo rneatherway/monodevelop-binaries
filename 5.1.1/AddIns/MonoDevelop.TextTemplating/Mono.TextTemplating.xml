@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>Mono.TextTemplating</name>
+    </assembly>
+    <members>
+        <member name="T:Mono.TextTemplating.CrossAppDomainAssemblyResolver">
+            <summary>
+            Provides a handler for AssemblyResolve events that looks them up in the domain that created the resolver.
+            </summary>
+        </member>
+    </members>
+</doc>

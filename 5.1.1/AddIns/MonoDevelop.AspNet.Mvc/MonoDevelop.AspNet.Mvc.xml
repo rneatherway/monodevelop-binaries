@@ -1,0 +1,678 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MonoDevelop.AspNet.Mvc</name>
+    </assembly>
+    <members>
+        <member name="T:RazorEditorParserFixed.RazorEditorParser">
+            <summary>
+            Parser used by editors to avoid reparsing the entire document on each text change
+            </summary>
+            <remarks>
+            This parser is designed to allow editors to avoid having to worry about incremental parsing.
+            The CheckForStructureChanges method can be called with every change made by a user in an editor and
+            the parser will provide a result indicating if it was able to incrementally reparse the document.
+            The general workflow for editors with this parser is:
+            0. User edits document
+            1. Editor builds TextChange structure describing the edit and providing a reference to the _updated_ text buffer
+            2. Editor calls CheckForStructureChanges passing in that change.
+            3. Parser determines if the change can be simply applied to an existing parse tree node
+            a.  If it can, the Parser updates its parse tree and returns PartialParseResult.Accepted
+            b.  If it can not, the Parser starts a background parse task and return PartialParseResult.Rejected
+            NOTE: Additional flags can be applied to the PartialParseResult, see that enum for more details.  However,
+            the Accepted or Rejected flags will ALWAYS be present
+            A change can only be incrementally parsed if a single, unique, Span (see System.Web.Razor.Parser.SyntaxTree) in the syntax tree can
+            be identified as owning the entire change.  For example, if a change overlaps with multiple spans, the change cannot be
+            parsed incrementally and a full reparse is necessary.  A Span "owns" a change if the change occurs either a) entirely
+            within it's boundaries or b) it is a pure insertion (see TextChange) at the end of a Span whose CanGrow flag (see Span) is
+            true.
+            Even if a single unique Span owner can be identified, it's possible the edit will cause the Span to split or merge with other
+            Spans, in which case, a full reparse is necessary to identify the extent of the changes to the tree.
+            When the RazorEditorParser returns Accepted, it updates CurrentParseTree immediately.  However, the editor is expected to
+            update it's own data structures independently.  It can use CurrentParseTree to do this, as soon as the editor returns from
+            CheckForStructureChanges, but it should (ideally) have logic for doing so without needing the new tree.
+            When Rejected is returned by CheckForStructureChanges, a background parse task has _already_ been started.  When that task
+            finishes, the DocumentStructureChanged event will be fired containing the new generated code, parse tree and a reference to
+            the original TextChange that caused the reparse, to allow the editor to resolve the new tree against any changes made since
+            calling CheckForStructureChanges.
+            If a call to CheckForStructureChanges occurs while a reparse is already in-progress, the reparse is cancelled IMMEDIATELY
+            and Rejected is returned without attempting to reparse.  This means that if a conusmer calls CheckForStructureChanges, which
+            returns Rejected, then calls it again before DocumentParseComplete is fired, it will only recieve one DocumentParseComplete
+            event, for the second change.
+            </remarks>
+        </member>
+        <member name="M:RazorEditorParserFixed.RazorEditorParser.#ctor(System.Web.Razor.RazorEngineHost,System.String)">
+            <summary>
+            Constructs the editor parser.  One instance should be used per active editor.  This
+            instance _can_ be shared among reparses, but should _never_ be shared between documents.
+            </summary>
+            <param name="host">The <see cref="T:System.Web.Razor.RazorEngineHost" /> which defines the environment in which the generated code will live.  <see cref="F:RazorEngineHost.DesignTimeMode" /> should be set if design-time code mappings are desired</param>
+            <param name="sourceFileName">The physical path to use in line pragmas</param>
+        </member>
+        <member name="E:RazorEditorParserFixed.RazorEditorParser.DocumentParseComplete">
+            <summary>
+            Event fired when a full reparse of the document completes
+            </summary>
+        </member>
+        <member name="M:RazorEditorParserFixed.RazorEditorParser.CheckForStructureChanges(System.Web.Razor.Text.TextChange)">
+            <summary>
+            Determines if a change will cause a structural change to the document and if not, applies it to the existing tree.
+            If a structural change would occur, automatically starts a reparse
+            </summary>
+            <remarks>
+            NOTE: The initial incremental parsing check and actual incremental parsing (if possible) occurs
+            on the callers thread.  However, if a full reparse is needed, this occurs on a background thread.
+            </remarks>
+            <param name="change">The change to apply to the parse tree</param>
+            <returns>A PartialParseResult value indicating the result of the incremental parse</returns>
+        </member>
+        <member name="M:RazorEditorParserFixed.RazorEditorParser.Dispose">
+            <summary>
+            Disposes of this parser.  Should be called when the editor window is closed and the document is unloaded.
+            </summary>
+        </member>
+        <member name="E:RazorEditorParserFixed.BackgroundParser.ResultsReady">
+            <summary>
+            Fired on the main thread.
+            </summary>
+        </member>
+        <member name="T:RazorEditorParserFixed.RazorResources">
+            <summary>
+            A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ResourceManager">
+            <summary>
+            Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Culture">
+            <summary>
+            Overrides the current thread's CurrentUICulture property for all
+            resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ActiveParser_Must_Be_Code_Or_Markup_Parser">
+            <summary>
+            Looks up a localized string similar to The active parser must the same as either the markup or code parser..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Block_Type_Not_Specified">
+            <summary>
+            Looks up a localized string similar to Block cannot be built because a Type has not been specified in the BlockBuilder.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.BlockName_Code">
+            <summary>
+            Looks up a localized string similar to code.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.BlockName_ExplicitExpression">
+            <summary>
+            Looks up a localized string similar to explicit expression.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CancelBacktrack_Must_Be_Called_Within_Lookahead">
+            <summary>
+            Looks up a localized string similar to The "CancelBacktrack" method can be called only while in a look-ahead process started with the "BeginLookahead" method..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CreateCodeWriter_NoCodeWriter">
+            <summary>
+            Looks up a localized string similar to Cannot call CreateCodeWriter, a CodeWriter was not provided to the Create method.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_CharacterLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;character literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_Comment">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;comment&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_Identifier">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;identifier&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_IntegerLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;integer literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_Keyword">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;keyword&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_Newline">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;newline sequence&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_RealLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;real literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_StringLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;string literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.CSharpSymbol_Whitespace">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;white space&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.EndBlock_Called_Without_Matching_StartBlock">
+            <summary>
+            Looks up a localized string similar to "EndBlock" was called without a matching call to "StartBlock"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ErrorComponent_Character">
+            <summary>
+            Looks up a localized string similar to "{0}" character.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ErrorComponent_EndOfFile">
+            <summary>
+            Looks up a localized string similar to end of file.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ErrorComponent_Newline">
+            <summary>
+            Looks up a localized string similar to line break.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ErrorComponent_Whitespace">
+            <summary>
+            Looks up a localized string similar to space or line break.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.HtmlSymbol_NewLine">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;newline sequence&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.HtmlSymbol_RazorComment">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;razor comment&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.HtmlSymbol_Text">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;text&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.HtmlSymbol_WhiteSpace">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;white space&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Language_Does_Not_Support_RazorComment">
+            <summary>
+            Looks up a localized string similar to Cannot use built-in RazorComment handler, language characteristics does not define the CommentStart, CommentStar and CommentBody known symbol types or parser does not override TokenizerBackedParser.OutputSpanBeforeRazorComment.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_AtInCode_Must_Be_Followed_By_Colon_Paren_Or_Identifier_Start">
+            <summary>
+            Looks up a localized string similar to The "@" character must be followed by a ":", "(", or a C# identifier.  If you intended to switch to markup, use an HTML start tag, for example:
+            @if(isLoggedIn) {
+            &lt;p&gt;Hello, @user!&lt;/p&gt;
+            }.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_BlockComment_Not_Terminated">
+            <summary>
+            Looks up a localized string similar to End of file was reached before the end of the block comment.  All comments started with "/*" sequence must be terminated with a matching "*/" sequence..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_BlockNotTerminated">
+            <summary>
+            Looks up a localized string similar to The "{0}" block was not terminated.  All "{0}" statements must be terminated with a matching "{1}"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Expected_CloseBracket_Before_EOF">
+            <summary>
+            Looks up a localized string similar to An opening "{0}" is missing the corresponding closing "{1}"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Expected_EndOfBlock_Before_EOF">
+            <summary>
+            Looks up a localized string similar to The {0} block is missing a closing "{1}" character.  Make sure you have a matching "{1}" character for all the "{2}" characters within this block, and that none of the "{1}" characters are being interpreted as markup..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Expected_X">
+            <summary>
+            Looks up a localized string similar to Expected "{0}"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Helpers_Cannot_Be_Nested">
+            <summary>
+            Looks up a localized string similar to Helper blocks cannot be nested within each other..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_InheritsKeyword_Must_Be_Followed_By_TypeName">
+            <summary>
+            Looks up a localized string similar to The 'inherits' keyword must be followed by a type name on the same line..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_InlineMarkup_Blocks_Cannot_Be_Nested">
+            <summary>
+            Looks up a localized string similar to Inline markup blocks (@&lt;p&gt;Content&lt;/p&gt;) cannot be nested.  Only one level of inline markup is allowed..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_InvalidOptionValue">
+            <summary>
+            Looks up a localized string similar to "{1}" is not a valid value for the "{0}" option. The "Option {0}" statement must be followed by either "On" or "Off". .
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_MarkupBlock_Must_Start_With_Tag">
+            <summary>
+            Looks up a localized string similar to Markup in a code block must start with a tag and all start tags must be matched with end tags.  Do not use unclosed tags like "&lt;br&gt;".  Instead use self-closing tags like "&lt;br/&gt;"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_MissingCharAfterHelperName">
+            <summary>
+            Looks up a localized string similar to Expected a "{0}" after the helper name..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_MissingCharAfterHelperParameters">
+            <summary>
+            Looks up a localized string similar to Expected a "{0}" after the helper parameters..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_MissingEndTag">
+            <summary>
+            Looks up a localized string similar to The "{0}" element was not closed.  All elements must be either self-closing or have a matching end tag..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_MissingOpenBraceAfterSection">
+            <summary>
+            Looks up a localized string similar to Sections cannot be empty.  The "@section" keyword must be followed by a block of markup surrounded by "{}".  For example:
+            @section Sidebar {
+            &lt;!-- Markup and text goes here --&gt;
+            }.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_NamespaceImportAndTypeAlias_Cannot_Exist_Within_CodeBlock">
+            <summary>
+            Looks up a localized string similar to Namespace imports and type aliases cannot be placed within code blocks.  They must immediately follow an "@" character in markup.  It is recommended that you put them at the top of the page, as in the following example:
+            @using System.Drawing;
+            @{
+            // OK here to use types from System.Drawing in the page.
+            }.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_NamespaceOrTypeAliasExpected">
+            <summary>
+            Looks up a localized string similar to The "Imports" keyword must be followed by a namespace or a type alias on the same line..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_OuterTagMissingName">
+            <summary>
+            Looks up a localized string similar to Outer tag is missing a name. The first character of a markup block must be an HTML tag with a valid name..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_RazorComment_Not_Terminated">
+            <summary>
+            Looks up a localized string similar to End of file was reached before the end of the block comment.  All comments that start with the "@*" sequence must be terminated with a matching "*@" sequence..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_ReservedWord">
+            <summary>
+            Looks up a localized string similar to "{0}" is a reserved word and cannot be used in implicit expressions.  An explicit expression ("@()") must be used..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Sections_Cannot_Be_Nested">
+            <summary>
+            Looks up a localized string similar to Section blocks ("{0}") cannot be nested.  Only one level of section blocks are allowed..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_SingleLine_ControlFlowStatements_Not_Allowed">
+            <summary>
+            Looks up a localized string similar to Expected a "{0}" but found a "{1}".  Block statements must be enclosed in "{{" and "}}".  You cannot use single-statement control-flow statements in CSHTML pages. For example, the following is not allowed:
+            @if(isLoggedIn)
+            &lt;p&gt;Hello, @user&lt;/p&gt;
+            Instead, wrap the contents of the block in "{{}}":
+            @if(isLoggedIn) {{
+            &lt;p&gt;Hello, @user&lt;/p&gt;
+            }}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_TextTagCannotContainAttributes">
+            <summary>
+            Looks up a localized string similar to "&lt;text&gt;" and "&lt;/text&gt;" tags cannot contain attributes..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected">
+            <summary>
+            Looks up a localized string similar to Unexpected "{0}".
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Character_At_Helper_Name_Start">
+            <summary>
+            Looks up a localized string similar to Unexpected {0} after helper keyword.  All helpers must have a name which starts with an "_" or alphabetic character. The remaining characters must be either "_" or alphanumeric..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Character_At_Section_Name_Start">
+            <summary>
+            Looks up a localized string similar to Unexpected {0} after section keyword.  Section names must start with an "_" or alphabetic character, and the remaining characters must be either "_" or alphanumeric..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Character_At_Start_Of_CodeBlock_CS">
+            <summary>
+            Looks up a localized string similar to "{0}" is not valid at the start of a code block.  Only identifiers, keywords, comments, "(" and "{{" are valid..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Character_At_Start_Of_CodeBlock_VB">
+            <summary>
+            Looks up a localized string similar to "{0}" is not valid at the start of a code block.  Only identifiers, keywords, comments, and "(" are valid..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_EndOfFile_At_Start_Of_CodeBlock">
+            <summary>
+            Looks up a localized string similar to End-of-file was found after the "@" character.  "@" must be followed by a valid code block.  If you want to output an "@", escape it using the sequence: "@@".
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Keyword_After_At">
+            <summary>
+            Looks up a localized string similar to Unexpected "{0}" keyword after "@" character.  Once inside code, you do not need to prefix constructs like "{0}" with "@"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_Nested_CodeBlock">
+            <summary>
+            Looks up a localized string similar to Unexpected "{" after "@" character. Once inside the body of a code block (@if {}, @{}, etc.) you do not need to use "@{" to switch to code..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_WhiteSpace_At_Start_Of_CodeBlock_CS">
+            <summary>
+            Looks up a localized string similar to A space or line break was encountered after the "@" character.  Only valid identifiers, keywords, comments, "(" and "{" are valid at the start of a code block and they must occur immediately following "@" with no space in between..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unexpected_WhiteSpace_At_Start_Of_CodeBlock_VB">
+            <summary>
+            Looks up a localized string similar to A space or line break was encountered after the "@" character.  Only valid identifiers, keywords, comments, and "(" are valid at the start of a code block and they must occur immediately following "@" with no space in between..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_UnexpectedEndTag">
+            <summary>
+            Looks up a localized string similar to Encountered end tag "{0}" with no matching start tag.  Are your start/end tags properly balanced?.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_UnfinishedTag">
+            <summary>
+            Looks up a localized string similar to End of file or an unexpected character was reached before the "{0}" tag could be parsed.  Elements inside markup blocks must be complete. They must either be self-closing ("&lt;br /&gt;") or have matching end tags ("&lt;p&gt;Hello&lt;/p&gt;").  If you intended to display a "&lt;" character, use the "&amp;lt;" HTML entity..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_UnknownOption">
+            <summary>
+            Looks up a localized string similar to Unknown option: "{0}"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_Unterminated_String_Literal">
+            <summary>
+            Looks up a localized string similar to Unterminated string literal.  Strings that start with a quotation mark (") must be terminated before the end of the line.  However, strings that start with @ and a quotation mark (@") can span multiple lines..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParseError_UnterminatedHelperParameterList">
+            <summary>
+            Looks up a localized string similar to Helper parameter list is missing a closing ")"..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Parser_Context_Not_Set">
+            <summary>
+            Looks up a localized string similar to Parser was started with a null Context property.  The Context property must be set BEFORE calling any methods on the parser..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserContext_CannotCompleteTree_NoRootBlock">
+            <summary>
+            Looks up a localized string similar to Cannot complete the tree, StartBlock must be called at least once..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserContext_CannotCompleteTree_OutstandingBlocks">
+            <summary>
+            Looks up a localized string similar to Cannot complete the tree, there are still open blocks..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserContext_NoCurrentBlock">
+            <summary>
+            Looks up a localized string similar to Cannot finish span, there is no current block. Call StartBlock at least once before finishing a span.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserContext_ParseComplete">
+            <summary>
+            Looks up a localized string similar to Cannot complete action, the parser has finished. Only CompleteParse can be called to extract the final parser results after the parser has finished.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserEror_SessionDirectiveMissingValue">
+            <summary>
+            Looks up a localized string similar to Missing value for session state directive..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.ParserIsNotAMarkupParser">
+            <summary>
+            Looks up a localized string similar to The parser provided to the ParserContext was not a Markup Parser..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.SectionExample_CS">
+            <summary>
+            Looks up a localized string similar to @section Header { ... }.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.SectionExample_VB">
+            <summary>
+            Looks up a localized string similar to @Section Header ... End Section.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Structure_Member_CannotBeNull">
+            <summary>
+            Looks up a localized string similar to The {0} property of the {1} structure cannot be null..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Symbol_Unknown">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;unknown&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Tokenizer_CannotResumeSymbolUnlessIsPrevious">
+            <summary>
+            Looks up a localized string similar to Cannot resume this symbol. Only the symbol immediately preceding the current one can be resumed..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.TokenizerView_CannotPutBack">
+            <summary>
+            Looks up a localized string similar to In order to put a symbol back, it must have been the symbol which ended at the current position. The specified symbol ends at {0}, but the current position is {1}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_BackgroundThreadShutdown">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Shutdown.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_BackgroundThreadStart">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Startup.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_ChangesArrived">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] {1} changes arrived.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_ChangesDiscarded">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Discarded {1} changes.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_CollectedDiscardedChanges">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Collecting {1} discarded changes.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_Disabled">
+            <summary>
+            Looks up a localized string similar to Disabled.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_EditorProcessedChange">
+            <summary>
+            Looks up a localized string similar to [P][{0}] {3} Change in {2} milliseconds: {1}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_EditorReceivedChange">
+            <summary>
+            Looks up a localized string similar to [P][{0}] Received Change: {1}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_Enabled">
+            <summary>
+            Looks up a localized string similar to Enabled.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_Format">
+            <summary>
+            Looks up a localized string similar to [Razor] {0}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_NoChangesArrived">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] no changes arrived?.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_ParseComplete">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Parse Complete in {1} milliseconds.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_QueuingParse">
+            <summary>
+            Looks up a localized string similar to [M][{0}] Queuing Parse for: {1}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_Startup">
+            <summary>
+            Looks up a localized string similar to [Razor] Editor Tracing {0}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.Trace_TreesCompared">
+            <summary>
+            Looks up a localized string similar to [BG][{0}] Trees Compared in {1} milliseconds. Different = {2}.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_CharacterLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;character literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_Comment">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;comment&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_DateLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;date literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_FloatingPointLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;floating point literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_Identifier">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;identifier&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_IntegerLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;integer literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_Keyword">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;keyword&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_NewLine">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;newline sequence&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_RazorComment">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;razor comment&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_StringLiteral">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;string literal&gt;&gt;.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.RazorResources.VBSymbol_WhiteSpace">
+            <summary>
+            Looks up a localized string similar to &lt;&lt;white space&gt;&gt;.
+            </summary>
+        </member>
+        <member name="T:RazorEditorParserFixed.CommonResources">
+            <summary>
+            A strongly-typed resource class, for looking up localized strings, etc.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.ResourceManager">
+            <summary>
+            Returns the cached ResourceManager instance used by this class.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Culture">
+            <summary>
+            Overrides the current thread's CurrentUICulture property for all
+            resource lookups using this strongly typed resource class.
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Cannot_Be_Null_Or_Empty">
+            <summary>
+            Looks up a localized string similar to Value cannot be null or an empty string..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_Between">
+            <summary>
+            Looks up a localized string similar to Value must be between {0} and {1}..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_Enum_Member">
+            <summary>
+            Looks up a localized string similar to Value must be a value from the "{0}" enumeration..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_GreaterThan">
+            <summary>
+            Looks up a localized string similar to Value must be greater than {0}..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_GreaterThanOrEqualTo">
+            <summary>
+            Looks up a localized string similar to Value must be greater than or equal to {0}..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_LessThan">
+            <summary>
+            Looks up a localized string similar to Value must be less than {0}..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_LessThanOrEqualTo">
+            <summary>
+            Looks up a localized string similar to Value must be less than or equal to {0}..
+            </summary>
+        </member>
+        <member name="P:RazorEditorParserFixed.CommonResources.Argument_Must_Be_Null_Or_Non_Empty">
+            <summary>
+            Looks up a localized string similar to Value cannot be an empty string. It must either be null or a non-empty string..
+            </summary>
+        </member>
+    </members>
+</doc>

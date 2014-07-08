@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MonoDevelop.AspNet</name>
+    </assembly>
+    <members>
+        <member name="M:MonoDevelop.AspNet.CodeBehind.GetDesignerMembers(System.Collections.Generic.IEnumerable{MonoDevelop.AspNet.Parser.CodeBehindMember},ICSharpCode.NRefactory.TypeSystem.IType,System.String)">
+            <summary>Filters out members whose names conflict with existing accessible members</summary>
+            <param name="members">Full list of CodeBehind members</param>
+            <param name="cls">The class to which these members' partial class will be added.</param>
+            <param name="designerFile">Members in this file will be ignored.</param>
+            <param name="resolveDom">The ITypeResolveContext to use for resolving base types.</param>
+            <param name="internalDom">The ITypeResolveContext to use for checking whether members are accessible as internal.</param>
+            <returns>The filtered list of non-conflicting members.</returns>
+        </member>
+        <member name="M:MonoDevelop.AspNet.Parser.DocumentReferenceManager.GetTagPrefixWithNewDirective(ICSharpCode.NRefactory.TypeSystem.IType,System.String,System.String,MonoDevelop.AspNet.Parser.RegisterDirective@)">
+            <summary>
+            Gets a tag prefix, also returning the directive that would have to be added if necessary.
+            </summary>
+        </member>
+        <member name="T:MonoDevelop.AspNet.Gui.LocalDocumentInfo">
+            <summary>
+            Embedded local region completion information for each keystroke
+            </summary>
+        </member>
+        <member name="T:MonoDevelop.AspNet.Gui.DocumentInfo">
+            <summary>
+            Embedded completion information calculated from the AspNetParsedDocument
+            </summary>
+        </member>
+        <member name="T:MonoDevelop.AspNet.Gui.ILanguageCompletionBuilder">
+            <summary>
+            Code completion for languages embedded in ASP.NET documents
+            </summary>
+        </member>
+        <member name="T:MonoDevelop.AspNet.LineInterceptingTextWriter">
+            <summary>
+            This is used to watch for a specific lines in a textwriter. It wraps an (optional) real writer,
+            parses lines, and raises events.
+            </summary>
+        </member>
+        <member name="P:MonoDevelop.AspNet.LineInterceptingTextWriter.LineCount">
+            <summary>
+            The number of lines that have been captured.
+            </summary>
+        </member>
+        <member name="P:MonoDevelop.AspNet.LineInterceptingTextWriter.MaxLineLength">
+            <summary>
+            The maximum number of characters that will be captured per line.
+            </summary>
+        </member>
+        <member name="T:MonoDevelop.AspNet.ProjectFileCache`2">
+            <summary>
+            Caches items for filename keys. Files may not exist, which doesn't matter.
+            When a project file with that name is cached in any way, the cache item will be flushed.
+            </summary>
+            <remarks>Not safe for multithreaded access.</remarks>
+        </member>
+        <member name="M:MonoDevelop.AspNet.ProjectFileCache`2.#ctor(`0)">
+            <summary>Creates a ProjectFileCache</summary>
+            <param name="project">The project the cache is bound to</param>
+        </member>
+        <member name="M:MonoDevelop.AspNet.ProjectFileCache`2.Get(System.String)">
+            <summary>
+            Queries the cache for an item. If the file does not exist in the project, returns null.
+            </summary>
+        </member>
+        <member name="M:MonoDevelop.AspNet.ProjectFileCache`2.Dispose">
+            <summary>
+            Detaches from the project's events.
+            </summary>
+        </member>
+        <member name="M:MonoDevelop.AspNet.ProjectFileCache`2.GenerateInfo(System.String)">
+            <summary>
+            Generates info for a given filename.
+            </summary>
+            <returns>Null if no info could be generated for the requested filename, e.g. if it did not exist.</returns>
+        </member>
+    </members>
+</doc>

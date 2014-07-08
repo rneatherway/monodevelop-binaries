@@ -1,0 +1,339 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MonoDevelop.CBinding</name>
+    </assembly>
+    <members>
+        <member name="F:CBinding.CProject.SourceExtensions">
+            <summary>
+            Extensions for C/C++ source files
+            </summary>
+        </member>
+        <member name="F:CBinding.CProject.HeaderExtensions">
+            <summary>
+            Extensions for C/C++ header files
+            </summary>
+        </member>
+        <member name="M:CBinding.CProject.WriteMDPkgPackage(MonoDevelop.Projects.ConfigurationSelector)">
+            <summary>
+            Ths pkg-config package is for internal MonoDevelop use only, it is not deployed.
+            </summary>
+        </member>
+        <member name="M:CBinding.CProject.WriteDeployablePgkPackage(MonoDevelop.Projects.Project,CBinding.CProjectConfiguration)">
+            <summary>
+            This is the pkg-config package that gets deployed.
+            <returns>The pkg-config package's filename</returns></summary>
+        </member>
+        <member name="M:CBinding.CProject.MatchingFile(System.String)">
+            <summary>
+            Finds the corresponding source or header file
+            </summary>
+            <param name="sourceFile">
+            The name of the file to be matched
+            <see cref="T:System.String" /></param>
+            <returns>
+            The corresponding file, or null if not found
+            <see cref="T:System.String" /></returns>
+        </member>
+        <member name="M:CBinding.GNUCompiler.DependedOnFiles(MonoDevelop.Projects.ProjectFile,CBinding.CProjectConfiguration)">
+            <summary>
+            Returns an array of depended on files or null if the
+            file containing the depended on files (.d) does does not exist.
+            </summary>
+        </member>
+        <member name="M:CBinding.GNUCompiler.IsStandardLibrary(CBinding.CProjectConfiguration,System.String,System.String,System.String@)">
+            <summary>
+            Checks whether a library can be linked with -lbasename
+            </summary>
+            <remarks>
+            This should return true iff directory is empty or in
+            the configured library paths, and library is of the form blah
+            or libblah.(a|so|dll|dylib),
+            </remarks>
+        </member>
+        <member name="M:CBinding.GNUCompiler.DoCompilation(MonoDevelop.Projects.ProjectFile,CBinding.CProjectConfiguration,System.String,MonoDevelop.Core.IProgressMonitor,System.CodeDom.Compiler.CompilerResults,System.Boolean)">
+            <summary>
+            Compiles a single source file into object code
+            and creates a file with it's dependencies.
+            </summary>
+        </member>
+        <member name="M:CBinding.GNUCompiler.ObjectFiles(MonoDevelop.Projects.ProjectFileCollection,CBinding.CProjectConfiguration,System.Boolean)">
+            <summary>
+            Gets the files that get compiled into object code.
+            </summary>
+            <param name="projectFiles">
+            A <see cref="T:MonoDevelop.Projects.ProjectFileCollection" />
+            The project's files, extracts from here the files that get compiled into object code.
+            </param>
+            <param name="configuration">
+            A <see cref="T:CBinding.CProjectConfiguration" />
+            The configuration to get the object files for...
+            </param>
+            <param name="withQuotes">
+            A <see cref="T:System.Boolean" />
+            If true, it will surround each object file with quotes
+            so that gcc has no problem with paths that contain spaces.
+            </param>
+            <returns>
+            An array of strings, each string is the name of a file
+            that will get compiled into object code. The file name
+            will already have the .o extension.
+            </returns>
+        </member>
+        <member name="M:CBinding.GNUCompiler.CheckReturnCode(System.Int32,System.CodeDom.Compiler.CompilerResults)">
+            <summary>
+            Checks a compilation return code,
+            and adds an error result if the compiler results
+            show no errors.
+            </summary>
+            <param name="returnCode">
+            A <see cref="T:System.Int32" />: A process return code
+            </param>
+            <param name="cr">
+            A <see cref="T:System.CodeDom.Compiler.CompilerResults" />: The return code from a compilation run
+            </param>
+        </member>
+        <member name="M:CBinding.Package.ProcessDescription(System.String)">
+            <summary>
+            Insert '\n's to make sure string isn't too long.
+            </summary>
+            <param name="desc">
+            The unprocessed description.
+            A <see cref="T:System.String" /></param>
+            <returns>
+            The processed description.
+            A <see cref="T:System.String" /></returns>
+        </member>
+        <member name="M:CBinding.Parser.FileInformation.RemoveFileInfo(System.String)">
+            <summary>
+            Remove a file's parse information from the database.
+            </summary>
+        </member>
+        <member name="T:CBinding.Parser.ProjectInformationManager">
+            <summary>
+            Singleton class to manage the navigation information of each project
+            </summary>
+        </member>
+        <member name="T:CBinding.Parser.TagDatabaseManager">
+            <summary>
+            Singleton class to manage tag databases
+            </summary>
+        </member>
+        <member name="M:CBinding.Parser.TagDatabaseManager.findFileInIncludes(MonoDevelop.Projects.Project,System.String)">
+            <summary>
+            Finds a file in a project's include path(s)
+            </summary>
+            <param name="project">
+            The project whose include path is to be searched
+            <see cref="T:MonoDevelop.Projects.Project" /></param>
+            <param name="filename">
+            A portion of a full file path
+            <see cref="T:System.String" /></param>
+            <returns>
+            The full found path, or filename if not found
+            <see cref="T:System.String" /></returns>
+        </member>
+        <member name="M:CBinding.Parser.TagDatabaseManager.findFileInPath(System.String,System.String)">
+            <summary>
+            Finds a file in a subdirectory of a given path
+            </summary>
+            <param name="relativeFilename">
+            A portion of a full file path
+            <see cref="T:System.String" /></param>
+            <param name="path">
+            The path beneath which to look for relativeFilename
+            <see cref="T:System.String" /></param>
+            <returns>
+            The full path, or string.Empty if not found
+            <see cref="T:System.String" /></returns>
+        </member>
+        <member name="M:CBinding.Parser.TagDatabaseManager.RemoveFileInfo(MonoDevelop.Projects.Project,System.String)">
+            <summary>
+            Remove a file's parse information from the database.
+            </summary>
+            <param name="project">
+            A <see cref="T:MonoDevelop.Projects.Project" />: The project to which the file belongs.
+            </param>
+            <param name="filename">
+            A <see cref="T:System.String" />: The file.
+            </param>
+        </member>
+        <member name="M:CBinding.Parser.TagDatabaseManager.OnFileUpdated(CBinding.Navigation.ClassPadEventArgs)">
+            <summary>
+            Wrapper method for the FileUpdated event.
+            </summary>
+        </member>
+        <member name="T:CBinding.CTextEditorExtension.GetMembersForExtension">
+            <summary>
+            A delegate for getting completion data
+            </summary>
+        </member>
+        <member name="F:CBinding.CTextEditorExtension.completionExtensions">
+            <summary>
+            An associative array containing each completion-triggering extension
+            and its respective callback
+            </summary>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.GetItemMembers(CBinding.CTextEditorExtension,System.String,System.String)">
+            <summary>
+            Gets contained members for a namespace or class
+            </summary>
+            <param name="self">
+            The current CTextEditorExtension
+            <see cref="T:CBinding.CTextEditorExtension" /></param>
+            <param name="completionExtension">
+            The extension that triggered the completion
+            (e.g. "::")
+            <see cref="T:System.String" /></param>
+            <param name="completionText">
+            The identifier that triggered the completion
+            (e.g. "Foo::")
+            <see cref="T:System.String" /></param>
+            <returns>
+            Completion data for the namespace or class
+            <see cref="T:MonoDevelop.Ide.CodeCompletion.CompletionDataList" /></returns>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.GetInstanceMembers(CBinding.CTextEditorExtension,System.String,System.String)">
+            <summary>
+            Gets contained members for an instance
+            </summary>
+            <param name="self">
+            The current CTextEditorExtension
+            <see cref="T:CBinding.CTextEditorExtension" /></param>
+            <param name="completionExtension">
+            The extension that triggered the completion
+            (e.g. "-&gt;")
+            <see cref="T:System.String" /></param>
+            <param name="completionText">
+            The identifier that triggered the completion
+            (e.g. "blah-&gt;")
+            <see cref="T:System.String" /></param>
+            <returns>
+            Completion data for the instance
+            <see cref="T:MonoDevelop.Ide.CodeCompletion.CompletionDataList" /></returns>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.AddItemsWithParent(MonoDevelop.Ide.CodeCompletion.CompletionDataList,System.Collections.Generic.IEnumerable{CBinding.Parser.LanguageItem},CBinding.Parser.LanguageItem)">
+            <summary>
+            Adds completion data for children to a list
+            </summary>
+            <param name="list">
+            The list to which completion data will be added
+            <see cref="T:MonoDevelop.Ide.CodeCompletion.CompletionDataList" /></param>
+            <param name="items">
+            A list of items to search
+            <see cref="!:IEnumerable" /></param>
+            <param name="parent">
+            The parent that will be matched
+            </param>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.GetMembersOfInstance(System.String,System.Boolean)">
+            <summary>
+            Gets completion data for a given instance
+            </summary>
+            <param name="instanceName">
+            The identifier of the instance
+            <see cref="T:System.String" /></param>
+            <param name="isPointer">
+            Whether the instance in question is a pointer
+            <see cref="T:System.Boolean" /></param>
+            <returns>
+            Completion data for the instance
+            <see cref="T:MonoDevelop.Ide.CodeCompletion.CompletionDataList" /></returns>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.AddMembersWithParent(MonoDevelop.Ide.CodeCompletion.CompletionDataList,System.Collections.Generic.IEnumerable{CBinding.Parser.LanguageItem},System.String)">
+            <summary>
+            Adds completion data for children to a list
+            </summary>
+            <param name="list">
+            The list to which completion data will be added
+            <see cref="T:MonoDevelop.Ide.CodeCompletion.CompletionDataList" /></param>
+            <param name="items">
+            A list of items to search
+            <see cref="!:IEnumerable" /></param>
+            <param name="parentName">
+            The name of the parent that will be matched
+            <see cref="T:System.String" /></param>
+        </member>
+        <member name="M:CBinding.CTextEditorExtension.ResetTriggerOffset(MonoDevelop.Ide.CodeCompletion.CodeCompletionContext)">
+            <summary>
+            Move the completion trigger offset to the beginning of the current token
+            </summary>
+        </member>
+        <member name="M:CBinding.Parser.LanguageItem.GetNamespace(CBinding.Parser.Tag,System.String)">
+            <summary>
+            Attempts to get the namespace encompasing the function
+            returns true on success and false if it does not have one.
+            NOTE: if it's a method then even if the class it belongs to
+            has a namespace the method will not have a namespace since
+            it should be placed under the class node and not the namespace node
+            </summary>
+        </member>
+        <!--FIXME: Invalid documentation markup was found for member F:CBinding.Parser.Member.InstanceTypeExpression-->
+        <member name="M:CBinding.Parser.Member.GetInstanceType(CBinding.Parser.Tag)">
+            <summary>
+            Populates an instance's instanceType and isPointer fields
+            by matching its pattern against InstanceTypeExpression
+            </summary>
+            <param name="tag">
+            The partially-populated tag of an instance
+            <see cref="T:CBinding.Parser.Tag" /></param>
+            <returns>
+            Whether the regex was successfully matched
+            <see cref="T:System.Boolean" /></returns>
+        </member>
+        <member name="T:CBinding.Parser.Local">
+            <summary>
+            Class for local variables
+            </summary>
+        </member>
+        <member name="T:CBinding.Parser.CDocumentParser">
+            <summary>
+            Ctags-based document parser helper
+            </summary>
+        </member>
+        <member name="M:CBinding.Parser.CDocumentParser.FindFunctionEnd(System.String[],System.Int32)">
+            <summary>
+            Finds the end of a function's definition by matching braces.
+            </summary>
+            <param name="content">
+            A <see cref="T:System.String" /> array: each line of the content to be searched.
+            </param>
+            <param name="startLine">
+            A <see cref="T:System.Int32" />: The earliest line at which the function may start.
+            </param>
+            <returns>
+            A <see cref="T:System.Int32" />: The detected end of the function.
+            </returns>
+        </member>
+        <member name="M:CBinding.Parser.CDocumentParser.FindFunctionStart(System.String[],System.Int32)">
+            <summary>
+            Finds the start of a function's definition.
+            </summary>
+            <param name="content">
+            A <see cref="T:System.String" /> array: each line of the content to be searched.
+            </param>
+            <param name="startLine">
+            A <see cref="T:System.Int32" />: The earliest line at which the function may start.
+            </param>
+            <returns>
+            A <see cref="T:System.Int32" />: The detected start of the function
+            definition, or -1.
+            </returns>
+        </member>
+        <member name="M:CBinding.Parser.CDocumentParser.LanguageItemToIType(CBinding.Parser.ProjectInformation,CBinding.Parser.LanguageItem,System.String[])">
+            <summary>
+            Create an IMember from a LanguageItem,
+            using the source document to locate declaration bounds.
+            </summary>
+            <param name="pi">
+            A <see cref="T:CBinding.Parser.ProjectInformation" /> for the current project.
+            </param>
+            <param name="item">
+            A <see cref="T:CBinding.Parser.LanguageItem" />: The item to convert.
+            </param>
+            <param name="contentLines">
+            A <see cref="!:System.String[]" />: The document in which item is defined.
+            </param>
+        </member>
+    </members>
+</doc>

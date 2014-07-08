@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>MonoDevelop.VersionControl.Subversion.Unix</name>
+    </assembly>
+    <members>
+        <member name="T:MonoDevelop.VersionControl.Subversion.Unix.UnixSvnBackend.AnnotationCollector">
+            <summary>
+            Class for collecting annotations from libsvn_client
+            </summary>
+        </member>
+        <member name="M:MonoDevelop.VersionControl.Subversion.Unix.UnixSvnBackend.AnnotationCollector.CollectorFunc(System.IntPtr,System.Int64,System.IntPtr,System.String,System.String,System.String,System.IntPtr)">
+            <summary>
+            A svn_client_blame_receiver_t implementation.
+            </summary>
+        </member>
+    </members>
+</doc>
